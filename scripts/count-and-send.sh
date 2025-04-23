@@ -34,12 +34,20 @@ REPO="${GITHUB_REPOSITORY}"
 COMMIT="${GITHUB_SHA}"
 COUNT=0
 
+# Make sure we fetch the latest changes before calculating diffs
+git fetch origin
+
 if [[ "$EVENT_NAME" == "push" ]]; then
   echo "Push event detected"
   echo "Comparing $GITHUB_EVENT_BEFORE -> $COMMIT"
+  
+  # Ensure we get the diff for all changed files in the push
   CHANGED_FILES=$(git diff --name-only "$GITHUB_EVENT_BEFORE" "$COMMIT")
+  
   echo "Changed files:"
   echo "$CHANGED_FILES"
+  
+  # Get the number of changed files
   COUNT=$(echo "$CHANGED_FILES" | wc -l)
 
 elif [[ "$EVENT_NAME" == "pull_request" ]]; then
@@ -68,6 +76,10 @@ fi
 echo "Found $COUNT changed files"
 
 echo "Sending payload to webhook..."
+curl -X POST "$API_URL" \
+  -H "Content-Type: application/json" \
+  -d "{\"repo\": \"$REPO\", \"commit\": \"$COMMIT\", \"changed_files_count\": \"$COUNT\"}"
+
 curl -X POST "$API_URL" \
   -H "Content-Type: application/json" \
   -d "{\"repo\": \"$REPO\", \"commit\": \"$COMMIT\", \"changed_files_count\": \"$COUNT\"}"
