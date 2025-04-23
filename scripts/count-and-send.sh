@@ -29,7 +29,6 @@ API_URL=$1
 
 echo "Detecting changes..."
 
-# Determine event name
 EVENT_NAME="${GITHUB_EVENT_NAME}"
 REPO="${GITHUB_REPOSITORY}"
 COMMIT="${GITHUB_SHA}"
@@ -37,7 +36,11 @@ COUNT=0
 
 if [[ "$EVENT_NAME" == "push" ]]; then
   echo "Push event detected"
-  COUNT=$(git diff-tree --no-commit-id --name-only -r "$COMMIT" | wc -l)
+  echo "Comparing $GITHUB_EVENT_BEFORE -> $COMMIT"
+  CHANGED_FILES=$(git diff --name-only "$GITHUB_EVENT_BEFORE" "$COMMIT")
+  echo "Changed files:"
+  echo "$CHANGED_FILES"
+  COUNT=$(echo "$CHANGED_FILES" | wc -l)
 
 elif [[ "$EVENT_NAME" == "pull_request" ]]; then
   echo "Pull request event detected"
@@ -48,7 +51,6 @@ elif [[ "$EVENT_NAME" == "pull_request" ]]; then
   if [[ "$PR_MERGED" == "true" ]]; then
     echo "PR #$PR_NUMBER was merged"
 
-    # Get changed files using GitHub API
     API_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
       "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/files")
 
@@ -65,9 +67,9 @@ fi
 
 echo "Found $COUNT changed files"
 
-# Send to Webhook
 echo "Sending payload to webhook..."
 curl -X POST "$API_URL" \
--H "Content-Type: application/json" \
--d "{\"repo\": \"$REPO\", \"commit\": \"$COMMIT\", \"changed_files_count\": \"$COUNT\"}"
+  -H "Content-Type: application/json" \
+  -d "{\"repo\": \"$REPO\", \"commit\": \"$COMMIT\", \"changed_files_count\": \"$COUNT\"}"
+
 
