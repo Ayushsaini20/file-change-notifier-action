@@ -33,6 +33,4 @@ runs:
         chmod +x ${{ github.action_path }}/scripts/count-and-send.sh
         ${{ github.action_path }}/scripts/count-and-send.sh "${{ inputs.api_url }}"
       shell: bash
-      env:
-        GITHUB_EVENT_BEFORE: ${{ github.event.before }}
 
