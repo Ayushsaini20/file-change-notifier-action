@@ -35,7 +35,7 @@
 #       shell: bash
 
 name: 'File Change Notifier'
-description: 'Counts changed files and sends data to a webhook.'
+description: 'Counts changed files (accurately) and sends data to a webhook.'
 author: 'Ayush Saini'
 
 inputs:
@@ -51,3 +51,4 @@ runs:
         chmod +x ${{ github.action_path }}/scripts/count-and-send.sh
         ${{ github.action_path }}/scripts/count-and-send.sh "${{ inputs.api_url }}"
       shell: bash
+
