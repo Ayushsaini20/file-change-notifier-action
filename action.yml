@@ -1,7 +1,25 @@
-# # action.yml
+# # # action.yml
+# # name: 'File Change Notifier'
+# # description: 'Counts changed files and sends data to a webhook.'
+# # author: 'Ayush Saini'
+# # inputs:
+# #   api_url:
+# #     description: 'Webhook URL to notify'
+# #     required: true
+
+# # runs:
+# #   using: "composite"
+# #   steps:
+# #     - name: Run count and send script
+# #       run: |
+# #         chmod +x ${{ github.action_path }}/scripts/count-and-send.sh
+# #         ${{ github.action_path }}/scripts/count-and-send.sh "${{ inputs.api_url }}"
+# #       shell: bash
+
 # name: 'File Change Notifier'
 # description: 'Counts changed files and sends data to a webhook.'
 # author: 'Ayush Saini'
+
 # inputs:
 #   api_url:
 #     description: 'Webhook URL to notify'
@@ -33,4 +51,3 @@ runs:
         chmod +x ${{ github.action_path }}/scripts/count-and-send.sh
         ${{ github.action_path }}/scripts/count-and-send.sh "${{ inputs.api_url }}"
       shell: bash
-
