@@ -83,21 +83,26 @@ COMMIT="${GITHUB_SHA}"
 COUNT=0
 
 echo "Event Name: $EVENT_NAME"
+echo "Repo: $REPO"
+echo "Commit: $COMMIT"
 
 if [[ "$EVENT_NAME" == "push" ]]; then
   echo "Push event detected"
-  git fetch origin $GITHUB_EVENT_BEFORE
-  CHANGED_FILES=$(git diff --name-only "$GITHUB_EVENT_BEFORE" "$COMMIT")
+  BEFORE_SHA=$(jq -r .before "$GITHUB_EVENT_PATH")
+  echo "Before SHA: $BEFORE_SHA"
+  echo "After SHA: $COMMIT"
+  git fetch origin
+  CHANGED_FILES=$(git diff --name-only "$BEFORE_SHA" "$COMMIT")
 
 elif [[ "$EVENT_NAME" == "pull_request" ]]; then
   echo "Pull request event detected"
-  PR_FILE="$GITHUB_EVENT_PATH"
-  PR_MERGED=$(jq --raw-output .pull_request.merged "$PR_FILE")
+  PR_MERGED=$(jq -r .pull_request.merged "$GITHUB_EVENT_PATH")
+  BASE_BRANCH=$(jq -r .pull_request.base.ref "$GITHUB_EVENT_PATH")
 
   if [[ "$PR_MERGED" == "true" ]]; then
-    echo "Pull request was merged"
-    git fetch origin main
-    CHANGED_FILES=$(git diff --name-only origin/main HEAD)
+    echo "PR merged into $BASE_BRANCH"
+    git fetch origin "$BASE_BRANCH"
+    CHANGED_FILES=$(git diff --name-only "origin/$BASE_BRANCH" HEAD)
   else
     echo "PR not merged. Skipping."
     exit 0
@@ -108,6 +113,7 @@ else
   exit 1
 fi
 
+# Count the non-empty lines
 COUNT=$(echo "$CHANGED_FILES" | grep -c '.')
 
 echo "Changed files:"
@@ -119,4 +125,5 @@ echo "Sending to webhook..."
 curl -X POST "$API_URL" \
   -H "Content-Type: application/json" \
   -d "{\"repo\": \"$REPO\", \"commit\": \"$COMMIT\", \"changed_files_count\": \"$COUNT\"}"
+
 
