@@ -71,6 +71,8 @@
 #   -H "Content-Type: application/json" \
 #   -d "$PAYLOAD"
 
+#!/bin/bash
+
 API_URL=$1
 
 echo "Detecting changes..."
@@ -79,45 +81,42 @@ EVENT_NAME="${GITHUB_EVENT_NAME}"
 REPO="${GITHUB_REPOSITORY}"
 COMMIT="${GITHUB_SHA}"
 COUNT=0
-CHANGED_FILES_ARRAY="[]"
+
+echo "Event Name: $EVENT_NAME"
 
 if [[ "$EVENT_NAME" == "push" ]]; then
   echo "Push event detected"
-  git fetch origin "$GITHUB_EVENT_BEFORE" --depth=10
+  git fetch origin $GITHUB_EVENT_BEFORE
   CHANGED_FILES=$(git diff --name-only "$GITHUB_EVENT_BEFORE" "$COMMIT")
+
 elif [[ "$EVENT_NAME" == "pull_request" ]]; then
   echo "Pull request event detected"
   PR_FILE="$GITHUB_EVENT_PATH"
   PR_MERGED=$(jq --raw-output .pull_request.merged "$PR_FILE")
+
   if [[ "$PR_MERGED" == "true" ]]; then
-    echo "PR was merged"
-    git fetch origin main --depth=10
-    MERGE_COMMIT=$(jq --raw-output .pull_request.merge_commit_sha "$PR_FILE")
-    CHANGED_FILES=$(git diff --name-only origin/main "$MERGE_COMMIT")
+    echo "Pull request was merged"
+    git fetch origin main
+    CHANGED_FILES=$(git diff --name-only origin/main HEAD)
   else
     echo "PR not merged. Skipping."
     exit 0
   fi
+
 else
   echo "Unsupported event: $EVENT_NAME"
   exit 1
 fi
 
-if [[ -z "$CHANGED_FILES" ]]; then
-  echo "No changed files detected"
-  COUNT=0
-  CHANGED_FILES_ARRAY="[]"
-else
-  COUNT=$(echo "$CHANGED_FILES" | grep -v '^$' | wc -l)
-  # Convert changed files to JSON array
-  CHANGED_FILES_ARRAY=$(echo "$CHANGED_FILES" | jq -R . | jq -s .)
-fi
-echo "Found $COUNT changed files"
-echo "Changed files: $CHANGED_FILES_ARRAY"
+COUNT=$(echo "$CHANGED_FILES" | grep -c '.')
 
-echo "Sending payload to webhook..."
-PAYLOAD="{\"repo\": \"$REPO\", \"commit\": \"$COMMIT\", \"changed_files_count\": $COUNT, \"changed_files\": $CHANGED_FILES_ARRAY}"
-echo "Payload: $PAYLOAD"
+echo "Changed files:"
+echo "$CHANGED_FILES"
+echo "Found $COUNT changed file(s)"
+
+# Send to Webhook
+echo "Sending to webhook..."
 curl -X POST "$API_URL" \
   -H "Content-Type: application/json" \
-  -d "$PAYLOAD"
+  -d "{\"repo\": \"$REPO\", \"commit\": \"$COMMIT\", \"changed_files_count\": \"$COUNT\"}"
+
